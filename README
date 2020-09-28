@@ -1,0 +1,3 @@
+./domain_manager.py --action add --web foros.midominio.org --mail midominio.org
+
+./domain_manager.py --action remove --web foros.midominio.org --mail midominio.org
