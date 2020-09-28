@@ -172,9 +172,9 @@ def add_apache_conf():
     dest = '/etc/apache2/sites-available/sympa.conf'
     append_and_replace(src, dest)
 
-    src = 'templates/new-domain-ssl.conf'
-    dest = '/etc/apache2/sites-available/sympa-le-ssl.conf'
-    append_and_replace(src, dest)
+#   src = 'templates/new-domain-ssl.conf'
+#   dest = '/etc/apache2/sites-available/sympa-le-ssl.conf'
+#   append_and_replace(src, dest)
 
     # mkdir /var/log/apache2/virtuales/MX_DOMAIN
     log_dir = "/var/log/apache2/virtuales/"+MX_DOMAIN
