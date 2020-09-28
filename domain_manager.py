@@ -129,7 +129,7 @@ def remove_sympa_conf():
 
 def add_ssl_conf():
     # certbot --expand nuevo.dominio..com certonly
-    #subprocess.run(['certbot', '--expand',WEB_DOMAIN,'certonly'],stdout=subprocess.PIPE)
+    # subprocess.run(['certbot', '--expand','-d',WEB_DOMAIN,'--apache','-n','certonly'],stdout=subprocess.PIPE)
     return True
 
 def tmp_backup():
