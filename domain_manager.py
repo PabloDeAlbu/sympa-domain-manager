@@ -129,6 +129,8 @@ def remove_sympa_conf():
 
 def add_ssl_conf():
     # certbot --expand nuevo.dominio..com certonly
+    # if os.path.isfile('/etc/apache2/sites-available/sympa-le-ssl.conf'):
+    #   os.remove('/etc/apache2/sites-available/sympa-le-ssl.conf')
     # subprocess.run(['certbot', '--expand','-d',WEB_DOMAIN,'--apache','-n','certonly'],stdout=subprocess.PIPE)
     return True
 
