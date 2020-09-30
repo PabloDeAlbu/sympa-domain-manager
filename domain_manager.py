@@ -132,13 +132,13 @@ def remove_sympa_conf():
 def add_ssl_conf():
     cmd = "certbot certificates | grep Domains: | sed 's/    Domains://g'  | sed 's/ / -d /g'"
     certificates = ' -d '+ WEB_DOMAIN + subprocess.check_output(cmd, shell=True).decode('UTF-8').strip('\n')
-    os.system(f'certbot --cert-name forums.achei.cl {certificates} --apache certonly')
+    os.system(f'certbot --cert-name forums.achei.cl {certificates} --apache')
     return True
 
 def remove_ssl_conf():
     cmd = f"certbot certificates | grep Domains: | sed 's/    Domains://g'  | sed 's/ {WEB_DOMAIN}//g' |sed 's/ / -d /g'"
     certificates = subprocess.check_output(cmd, shell=True).decode('UTF-8').strip('\n')
-    os.system(f'certbot --cert-name forums.achei.cl {certificates} --apache certonly')
+    os.system(f'certbot --cert-name forums.achei.cl {certificates} --apache')
     return True
 
 def tmp_backup():
