@@ -131,14 +131,14 @@ def remove_sympa_conf():
 
 def add_ssl_conf():
     cmd = "certbot certificates | grep Domains: | sed 's/    Domains://g'  | sed 's/ / -d /g'"
-    certificates = ' -d '+ WEB_DOMAIN + subprocess.check_output(cmd, shell=True).decode('UTF-8')
-    os.system(f'certbot --cert-name forums.achei.cl {certificates} --dry-run certonly')
+    certificates = ' -d '+ WEB_DOMAIN + subprocess.check_output(cmd, shell=True).decode('UTF-8').strip('\n')
+    os.system(f'certbot --cert-name forums.achei.cl {certificates} --apache certonly')
     return True
 
 def remove_ssl_conf():
     cmd = f"certbot certificates | grep Domains: | sed 's/    Domains://g'  | sed 's/ {WEB_DOMAIN}//g' |sed 's/ / -d /g'"
-    certificates = subprocess.check_output(cmd, shell=True).decode('UTF-8')
-    os.system(f'certbot --cert-name forums.achei.cl {certificates} --dry-run certonly')
+    certificates = subprocess.check_output(cmd, shell=True).decode('UTF-8').strip('\n')
+    os.system(f'certbot --cert-name forums.achei.cl {certificates} --apache certonly')
     return True
 
 def tmp_backup():
@@ -152,15 +152,15 @@ def tmp_backup():
 
 def do_backup():
     now = datetime.now().strftime("%Y-%m-%d_%H.%M")
-    os.makedirs(BACKUPS_DIR + 'etc/apache2/sites-available/', exist_ok=True)
-    os.makedirs(BACKUPS_DIR + 'etc/exim4/', exist_ok=True)
+    os.makedirs(BACKUPS_DIR + '/etc/apache2/sites-available/', exist_ok=True)
+    os.makedirs(BACKUPS_DIR + '/etc/exim4/', exist_ok=True)
     if os.path.isfile('/tmp/sympa.conf.bk'):
-        shutil.copy('/tmp/sympa.conf.bk',BACKUPS_DIR+'etc/apache2/sites-available/sympa.conf_'+now)
+        shutil.copy('/tmp/sympa.conf.bk',BACKUPS_DIR+'/etc/apache2/sites-available/sympa.conf_'+now)
     if os.path.isfile('/tmp/sympa-le-ssl.conf.bk'):
-        shutil.copy('/tmp/sympa-le-ssl.conf.bk',BACKUPS_DIR+'etc/apache2/sites-available/sympa-le-ssl.conf_'+now)
+        shutil.copy('/tmp/sympa-le-ssl.conf.bk',BACKUPS_DIR+'/etc/apache2/sites-available/sympa-le-ssl.conf_'+now)
     if os.path.isfile('/tmp/dominios_virtuales.bk'):
-        shutil.copy('/tmp/dominios_virtuales.bk', BACKUPS_DIR+'etc/exim4/dominios_virtuales_'+now)
-    print("Backup file have been created in "+BACKUPS_DIR+'etc/apache2/sites-available/sympa.conf_'+now)
+        shutil.copy('/tmp/dominios_virtuales.bk', BACKUPS_DIR+'/etc/exim4/dominios_virtuales_'+now)
+    print("Backup file have been created in "+BACKUPS_DIR+'/etc/apache2/sites-available/sympa.conf_'+now)
 
 
 def restore_backup():
@@ -193,6 +193,23 @@ def add_apache_conf():
     print(f"A VirtualHost has been added in /etc/apache2/sites-available/sympa.conf for {WEB_DOMAIN}")
     return True
 
+def remove_apache_conf():
+    with open(SYMPA_CONF, "r") as file:
+        lines = file.readlines()
+    with open(SYMPA_CONF, "w") as file:
+        write = True
+        for line in lines:
+            if (write and line.strip("\n") != f"# START {WEB_DOMAIN}"):
+                file.write(line)
+            elif (line.strip("\n") == f"# START {WEB_DOMAIN}"):
+                write = False
+            elif (line.strip("\n") == f"# END {WEB_DOMAIN}"):
+                write = True
+
+    conf_check("apachectl","-t")
+    return True
+
+
 def append_and_replace(src, dest):
     src_file = open(src, "r")
     dest_file = open(dest, "a+")
@@ -220,6 +237,22 @@ def exist_domain():
     exist = os.path.isfile(SYSCONFDIR + MX_DOMAIN + '/robot.conf')
     return exist
 
+def reload_apache():
+    try:
+        complete = subprocess.run(['service', 'apache2', 'reload'],stdout=subprocess.PIPE,stderr=subprocess.PIPE, check=True)
+    except subprocess.CalledProcessError as err:
+        print('ERROR:', err)
+        restore_backup()
+        exit()
+        return False
+    print(complete.stdout.decode('ascii').strip('\n'))
+
+def main(action):
+    # Get the function from switcher dictionary
+    func = switcher.get(action, invalid_action)
+    # Execute the function
+    return func()
+
 def add():
     if(not exist_domain()):
         validate_dns()
@@ -228,31 +261,9 @@ def add():
         add_ssl_conf()
         add_apache_conf()
         do_backup()
+        reload_apache()
     else:
         print(WEB_DOMAIN,"is already configured in Sympa\nNo changes were made")
-
-def main(action):
-    # Get the function from switcher dictionary
-    func = switcher.get(action, invalid_action)
-    # Execute the function
-    return func()
-
-
-def remove_apache_conf():
-    with open(SYMPA_CONF, "r") as file:
-        lines = file.readlines()
-    with open(SYMPA_CONF, "w") as file:
-        write = True
-        for line in lines:
-            if (write and line.strip("\n") != f"# START {WEB_DOMAIN}"):
-                file.write(line)
-            elif (line.strip("\n") == f"# START {WEB_DOMAIN}"):
-                write = False
-            elif (line.strip("\n") == f"# END {WEB_DOMAIN}"):
-                write = True
-
-    conf_check("apachectl","-t")
-    return True
 
 def remove():
     if(exist_domain()):
@@ -261,6 +272,7 @@ def remove():
         remove_ssl_conf()
         remove_apache_conf()
         do_backup()
+        reload_apache()
     else:
         print(WEB_DOMAIN,"does not exist in Sympa.\nNo changes were made")
 
@@ -271,6 +283,5 @@ switcher = {
         'add': add,
         'remove': remove,
     }
-
 tmp_backup()
 main(action)
