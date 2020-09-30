@@ -20,11 +20,14 @@ parser.add_argument('--lang', help='Language for the user interface', default="e
 parser.add_argument('--listmasters', help='Listmasters email addresses separated by commas')
 args = parser.parse_args()
 
+SYMPA_CONF = '/etc/apache2/sites-available/sympa.conf'
+SYMPA_LE_SSL_CONF = '/etc/apache2/sites-available/sympa-le-ssl.conf'
+DOMINIOS_VIRTUALES = '/etc/exim4/dominios_virtuales'
 # setup
 MX_DOMAIN = args.mail
 WEB_DOMAIN = args.web
 SYSCONFDIR = '/etc/sympa/'
-BACKUPS_DIR = 'domain_manager_backups/'
+BACKUPS_DIR = 'domain_manager_backups'
 DEFAULT_LANG=args.lang
 TITLE=args.title
 if (args.listmasters is not None):
@@ -53,10 +56,9 @@ def add_exim_conf():
     print('service exim4 restart')
 
 def remove_exim_conf():
-    dominios_virtuales = '/etc/exim4/dominios_virtuales'
-    with open(dominios_virtuales, "r") as file:
+    with open(DOMINIOS_VIRTUALES, "r") as file:
         lines = file.readlines()
-    with open(dominios_virtuales, "w") as file:
+    with open(DOMINIOS_VIRTUALES, "w") as file:
         for line in lines:
             if (line.strip("\n") != MX_DOMAIN):
                 file.write(line)
@@ -128,17 +130,22 @@ def remove_sympa_conf():
     return True
 
 def add_ssl_conf():
-    # certbot --expand nuevo.dominio..com certonly
-    # if os.path.isfile('/etc/apache2/sites-available/sympa-le-ssl.conf'):
-    #   os.remove('/etc/apache2/sites-available/sympa-le-ssl.conf')
-    # subprocess.run(['certbot', '--expand','-d',WEB_DOMAIN,'--apache','-n','certonly'],stdout=subprocess.PIPE)
+    cmd = "certbot certificates | grep Domains: | sed 's/    Domains://g'  | sed 's/ / -d /g'"
+    certificates = ' -d '+ WEB_DOMAIN + subprocess.check_output(cmd, shell=True).decode('UTF-8')
+    os.system(f'certbot --cert-name forums.achei.cl {certificates} --dry-run certonly')
+    return True
+
+def remove_ssl_conf():
+    cmd = f"certbot certificates | grep Domains: | sed 's/    Domains://g'  | sed 's/ {WEB_DOMAIN}//g' |sed 's/ / -d /g'"
+    certificates = subprocess.check_output(cmd, shell=True).decode('UTF-8')
+    os.system(f'certbot --cert-name forums.achei.cl {certificates} --dry-run certonly')
     return True
 
 def tmp_backup():
-    if os.path.isfile('/etc/apache2/sites-available/sympa.conf'):
-        shutil.copy('/etc/apache2/sites-available/sympa.conf', '/tmp/sympa.conf.bk')
-    if os.path.isfile('/etc/apache2/sites-available/sympa-le-ssl.conf'):
-        shutil.copy('/etc/apache2/sites-available/sympa-le-ssl.conf', '/tmp/sympa-le-ssl.conf.bk')
+    if os.path.isfile(SYMPA_CONF):
+        shutil.copy(SYMPA_CONF, '/tmp/sympa.conf.bk')
+    if os.path.isfile(SYMPA_LE_SSL_CONF):
+        shutil.copy(SYMPA_LE_SSL_CONF, '/tmp/sympa-le-ssl.conf.bk')
     if os.path.isfile('/etc/exim4/dominios_virtuales'):
         shutil.copy('/etc/exim4/dominios_virtuales', '/tmp/dominios_virtuales.bk')
     # backup de robot.conf
@@ -232,10 +239,9 @@ def main(action):
 
 
 def remove_apache_conf():
-    sympa_conf = '/etc/apache2/sites-available/sympa.conf'
-    with open(sympa_conf, "r") as file:
+    with open(SYMPA_CONF, "r") as file:
         lines = file.readlines()
-    with open(sympa_conf, "w") as file:
+    with open(SYMPA_CONF, "w") as file:
         write = True
         for line in lines:
             if (write and line.strip("\n") != f"# START {WEB_DOMAIN}"):
@@ -246,9 +252,6 @@ def remove_apache_conf():
                 write = True
 
     conf_check("apachectl","-t")
-    return True
-
-def remove_ssl_conf():
     return True
 
 def remove():
