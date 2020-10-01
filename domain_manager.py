@@ -258,8 +258,8 @@ def add():
         validate_dns()
         add_exim_conf()
         add_sympa_conf()
-        add_ssl_conf()
         add_apache_conf()
+        add_ssl_conf()
         do_backup()
         reload_apache()
     else:
@@ -269,8 +269,8 @@ def remove():
     if(exist_domain()):
         remove_exim_conf()
         remove_sympa_conf()
-        remove_ssl_conf()
         remove_apache_conf()
+        remove_ssl_conf()
         do_backup()
         reload_apache()
     else:
