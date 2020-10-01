@@ -80,7 +80,7 @@ def add_sympa_conf():
 
     # #Importante: este archivo o carpeta tiene que estar con permisos sympa:sympa
     # mkdir /etc/sympa/MX_DOMAIN
-    list_dir = SYSCONFDIR + MX_DOMAIN + '/'
+    list_dir = SYSCONFDIR + WEB_DOMAIN + '/'
 
     # cp /etc/sympa/robot.conf.EXAMPLE /etc/sympa/MX_DOMAIN/robot.conf
     os.makedirs(list_dir, exist_ok=True)
@@ -121,7 +121,7 @@ def add_sympa_conf():
 
 
 def remove_sympa_conf():
-    list_dir = SYSCONFDIR + MX_DOMAIN + '/'
+    list_dir = SYSCONFDIR + WEB_DOMAIN + '/'
     robot_conf = list_dir + 'robot.conf'
     conf_check(sympa_pl,"--health_check")
     os.remove(robot_conf)
@@ -234,7 +234,7 @@ def append_and_replace(src, dest):
     return True
 
 def exist_domain():
-    exist = os.path.isfile(SYSCONFDIR + MX_DOMAIN + '/robot.conf')
+    exist = os.path.isfile(SYSCONFDIR + WEB_DOMAIN + '/robot.conf')
     return exist
 
 def reload_apache():
