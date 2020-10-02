@@ -25,7 +25,7 @@ args = parser.parse_args()
 MX_DOMAIN = args.mail
 WEB_DOMAIN = args.web
 SYSCONFDIR = '/etc/sympa/'
-BACKUPS_DIR = 'domain_manager_backups'
+BACKUPS_DIR = 'domain_manager_backups/'
 DEFAULT_LANG=args.lang
 CERT_SSL=args.cert
 print(CERT_SSL)
@@ -136,8 +136,8 @@ def remove_sympa_conf():
 
 def add_ssl_conf():
     cmd = "certbot certificates | grep Domains: | sed 's/    Domains://g'  | sed 's/ / -d /g'"
-    certificates = ' -d '+ WEB_DOMAIN + subprocess.check_output(cmd, shell=True).decode('UTF-8').strip('\n')
-    os.system(f'certbot --cert-name forums.achei.cl {certificates} --force-interactive --apache')
+    certificates = subprocess.check_output(cmd, shell=True).decode('UTF-8').strip('\n') + ' -d '+ WEB_DOMAIN
+    os.system(f'certbot --cert-name forums.achei.cl {certificates} --apache')
 
 def remove_ssl_conf():
     cmd = f"certbot certificates | grep Domains: | sed 's/    Domains://g'  | sed 's/ {WEB_DOMAIN}//g' |sed 's/ / -d /g'"
@@ -153,8 +153,8 @@ def tmp_backup():
 
 def do_backup():
     now = datetime.now().strftime("%Y-%m-%d_%H.%M")
-    os.makedirs(BACKUPS_DIR + '/etc/apache2/sites-available/', exist_ok=True)
-    os.makedirs(BACKUPS_DIR + '/etc/exim4/', exist_ok=True)
+    os.makedirs(BACKUPS_DIR + 'etc/apache2/sites-available/', exist_ok=True)
+    os.makedirs(BACKUPS_DIR + 'etc/exim4/', exist_ok=True)
     print("Backup file have been created in ")
     for file in files:
         filename = os.path.basename(file)
