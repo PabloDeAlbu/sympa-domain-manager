@@ -17,18 +17,23 @@ parser.add_argument('--web',"-w", required=True, help='Domain used to access the
 parser.add_argument('--mail',"-m", required=True, help='Domain used for mails')
 parser.add_argument('--title',"-t", help='The name of your mailing list service', default="Your MailingLists Service")
 parser.add_argument('--lang', help='Language for the user interface', default="en_US")
+parser.add_argument('--cert', help='Generate SSL Certificate', default='true')
 parser.add_argument('--listmasters', help='Listmasters email addresses separated by commas')
 args = parser.parse_args()
 
 SYMPA_CONF = '/etc/apache2/sites-available/sympa.conf'
 SYMPA_LE_SSL_CONF = '/etc/apache2/sites-available/sympa-le-ssl.conf'
 DOMINIOS_VIRTUALES = '/etc/exim4/dominios_virtuales'
+
+
 # setup
 MX_DOMAIN = args.mail
 WEB_DOMAIN = args.web
 SYSCONFDIR = '/etc/sympa/'
 BACKUPS_DIR = 'domain_manager_backups'
 DEFAULT_LANG=args.lang
+CERT_SSL=args.cert
+print(CERT_SSL)
 TITLE=args.title
 if (args.listmasters is not None):
     ROBOT_LISTMASTERS = "listmaster " + args.listmasters
@@ -65,16 +70,8 @@ def remove_exim_conf():
     print('service exim4 restart')
 
 def conf_check(cmd, arg):
-    try:
-        subprocess.run([cmd, arg],stdout=subprocess.PIPE,stderr=subprocess.PIPE, check=True)
-    except subprocess.CalledProcessError as err:
-        print('ERROR:', err)
-        restore_backup()
-        exit()
-        return False
-    else:
-        #print('returncode:', completed.returncode)
-        return True
+    subprocess.run([cmd, arg],stdout=subprocess.PIPE,stderr=subprocess.PIPE, check=True)
+    return True
 
 def add_sympa_conf():
 
@@ -132,7 +129,8 @@ def remove_sympa_conf():
 def add_ssl_conf():
     cmd = "certbot certificates | grep Domains: | sed 's/    Domains://g'  | sed 's/ / -d /g'"
     certificates = ' -d '+ WEB_DOMAIN + subprocess.check_output(cmd, shell=True).decode('UTF-8').strip('\n')
-    os.system(f'certbot --cert-name forums.achei.cl {certificates} --apache')
+    try:
+        os.system(f'certbot --cert-name forums.achei.cl {certificates} --force-interactive --apache')
     return True
 
 def remove_ssl_conf():
@@ -166,7 +164,7 @@ def do_backup():
 def restore_backup():
     log_dir = "/var/log/apache2/virtuales/"+MX_DOMAIN
     os.rmdir(log_dir)
-    list_dir = SYSCONFDIR + MX_DOMAIN + '/'
+    list_dir = SYSCONFDIR + WEB_DOMAIN + '/'
     shutil.rmtree(list_dir)
     if os.path.isfile('/tmp/sympa.conf.bk'):
         shutil.copy('/etc/apache2/sites-available/sympa.conf',"/tmp/roto")
@@ -259,7 +257,8 @@ def add():
         add_exim_conf()
         add_sympa_conf()
         add_apache_conf()
-        add_ssl_conf()
+        if CERT_SSL.lower() == 'true':
+            add_ssl_conf()
         do_backup()
         reload_apache()
     else:
@@ -270,7 +269,8 @@ def remove():
         remove_exim_conf()
         remove_sympa_conf()
         remove_apache_conf()
-        remove_ssl_conf()
+        if CERT_SSL.lower() == 'true':
+            remove_ssl_conf()
         do_backup()
         reload_apache()
     else:
@@ -284,4 +284,8 @@ switcher = {
         'remove': remove,
     }
 tmp_backup()
-main(action)
+try:
+    main(action)
+except Exception as err:
+    print('ERROR:', err)
+    restore_backup()
