@@ -21,11 +21,6 @@ parser.add_argument('--cert', help='Generate SSL Certificate', default='true')
 parser.add_argument('--listmasters', help='Listmasters email addresses separated by commas')
 args = parser.parse_args()
 
-SYMPA_CONF = '/etc/apache2/sites-available/sympa.conf'
-SYMPA_LE_SSL_CONF = '/etc/apache2/sites-available/sympa-le-ssl.conf'
-DOMINIOS_VIRTUALES = '/etc/exim4/dominios_virtuales'
-
-
 # setup
 MX_DOMAIN = args.mail
 WEB_DOMAIN = args.web
@@ -43,6 +38,19 @@ else:
 os.makedirs(BACKUPS_DIR, exist_ok=True)
 action = args.action
 sympa_pl = '/usr/lib/sympa/bin/sympa.pl'
+
+SYMPA_CONF = '/etc/apache2/sites-available/sympa.conf'
+SYMPA_LE_SSL_CONF = '/etc/apache2/sites-available/sympa-le-ssl.conf'
+DOMINIOS_VIRTUALES = '/etc/exim4/dominios_virtuales'
+
+# files to be backuped
+files = {
+    SYMPA_CONF, 
+    SYMPA_LE_SSL_CONF, 
+    DOMINIOS_VIRTUALES, 
+#    f'/etc/sympa/{WEB_DOMAIN}/robot.conf'
+}
+
 
 def validate_dns():    
     mx_record = subprocess.run(['dig', '+short','MX',MX_DOMAIN],stdout=subprocess.PIPE).stdout.decode('ascii').strip('\n')
@@ -138,25 +146,21 @@ def remove_ssl_conf():
     return True
 
 def tmp_backup():
-    if os.path.isfile(SYMPA_CONF):
-        shutil.copy(SYMPA_CONF, '/tmp/sympa.conf.bk')
-    if os.path.isfile(SYMPA_LE_SSL_CONF):
-        shutil.copy(SYMPA_LE_SSL_CONF, '/tmp/sympa-le-ssl.conf.bk')
-    if os.path.isfile('/etc/exim4/dominios_virtuales'):
-        shutil.copy('/etc/exim4/dominios_virtuales', '/tmp/dominios_virtuales.bk')
+    for file in files:
+        if os.path.isfile(file):
+            shutil.copy(file, f'/tmp/{os.path.basename(file)}.bk')
     # backup de robot.conf
 
 def do_backup():
     now = datetime.now().strftime("%Y-%m-%d_%H.%M")
     os.makedirs(BACKUPS_DIR + '/etc/apache2/sites-available/', exist_ok=True)
     os.makedirs(BACKUPS_DIR + '/etc/exim4/', exist_ok=True)
-    if os.path.isfile('/tmp/sympa.conf.bk'):
-        shutil.copy('/tmp/sympa.conf.bk',BACKUPS_DIR+'/etc/apache2/sites-available/sympa.conf_'+now)
-    if os.path.isfile('/tmp/sympa-le-ssl.conf.bk'):
-        shutil.copy('/tmp/sympa-le-ssl.conf.bk',BACKUPS_DIR+'/etc/apache2/sites-available/sympa-le-ssl.conf_'+now)
-    if os.path.isfile('/tmp/dominios_virtuales.bk'):
-        shutil.copy('/tmp/dominios_virtuales.bk', BACKUPS_DIR+'/etc/exim4/dominios_virtuales_'+now)
-    print("Backup file have been created in "+BACKUPS_DIR+'/etc/apache2/sites-available/sympa.conf_'+now)
+    print("Backup file have been created in ")
+    for file in files:
+        filename = os.path.basename(file)
+        if os.path.isfile(f'/tmp/{filename}.bk'):
+            shutil.copy(f'/tmp/{filename}.bk', BACKUPS_DIR + f'{filename}_' + now)
+            print(' - ' + BACKUPS_DIR + f'{filename}_' + now)
 
 
 def restore_backup():
@@ -164,18 +168,18 @@ def restore_backup():
     os.rmdir(log_dir)
     list_dir = SYSCONFDIR + WEB_DOMAIN + '/'
     shutil.rmtree(list_dir)
-    if os.path.isfile('/tmp/sympa.conf.bk'):
-        shutil.copy('/etc/apache2/sites-available/sympa.conf',"/tmp/roto")
-        shutil.copy('/tmp/sympa.conf.bk', '/etc/apache2/sites-available/sympa.conf')
-    if os.path.isfile('/tmp/sympa-le-ssl.conf.bk'):
-        shutil.copy('/tmp/sympa-le-ssl.conf.bk', '/etc/apache2/sites-available/sympa-le-ssl.conf')
+
+    for file in files:
+        filename = os.path.basename(file)
+        if os.path.isfile(f'/tmp/{filename}.bk'):
+#            shutil.copy(file, f'/tmp/{os.path.basename(file)}.broken')
+            shutil.copy(f'/tmp/{filename}.bk', file)
     print("No changes were made")
         
 
 def add_apache_conf():
     src = 'templates/new-domain.conf'
-    dest = '/etc/apache2/sites-available/sympa.conf'
-    append_and_replace(src, dest)
+    append_and_replace(src, SYMPA_CONF)
 
 #   src = 'templates/new-domain-ssl.conf'
 #   dest = '/etc/apache2/sites-available/sympa-le-ssl.conf'
@@ -186,7 +190,7 @@ def add_apache_conf():
     os.makedirs(log_dir, exist_ok=True)
 
     conf_check("apachectl","-t")
-    print(f"A VirtualHost has been added in /etc/apache2/sites-available/sympa.conf for {WEB_DOMAIN}")
+    print(f"A VirtualHost has been added in {SYMPA_CONF} for {WEB_DOMAIN}")
     return True
 
 def remove_apache_conf():
