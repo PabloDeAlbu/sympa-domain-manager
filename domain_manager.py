@@ -146,8 +146,9 @@ def remove_ssl_conf():
     cmd = f"certbot certificates | grep Domains: | sed 's/    Domains://g'  | sed 's/ {WEB_DOMAIN}//g' |sed 's/ / -d /g'"
     certificates = subprocess.check_output(cmd, shell=True).decode('UTF-8').strip('\n')
     os.system(f'certbot certonly --cert-name forums.achei.cl {certificates} --apache')
-    src = 'templates/new-domain-ssl.conf'
-    append_and_replace(src, SYMPA_LE_SSL_CONF)
+    # src = 'templates/new-domain-ssl.conf'
+    # TODO hacer un remove
+    # append_and_replace(src, SYMPA_LE_SSL_CONF)
     return True
 
 def tmp_backup():
