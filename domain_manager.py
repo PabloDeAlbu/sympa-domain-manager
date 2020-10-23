@@ -259,6 +259,7 @@ def add():
         add_exim_conf()
         add_sympa_conf()
         add_apache_conf()
+        reload_apache()
         if CERT_SSL.lower() == 'true':
             add_ssl_conf()
         do_backup()
@@ -271,6 +272,7 @@ def remove():
         remove_exim_conf()
         remove_sympa_conf()
         remove_apache_conf()
+        reload_apache()
         if CERT_SSL.lower() == 'true':
             remove_ssl_conf()
         do_backup()
